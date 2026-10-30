@@ -1,0 +1,17 @@
+To run this command, you need to visit civmap.com and open inspect element.AWSTemplateFormatVersion: "2010-09-09"
+
+Then navigate to "Console" and paste this command:
+
+fetch('https://api.civ.tools/public/claims?world=world')
+  .then(r => r.json())
+  .then(d => {
+    console.log(`Downloaded ${d.length} claims`);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' }));
+    a.download = 'claims.json';
+    a.click();
+  });
+
+When you run this command, it will download a file named "claims.json" containing all polygon positions, nation names, and colors. You can view that file directly from inspect element's Network -> Response to verify (it's truncated due to the size of the file, aka too large to show it all).
+If your browser blocks the paste in console, simply type "allow pasting". Your browser placed that block to keep you safe from getting scammed.
+However, this command is safe to run and does not harm your computer.

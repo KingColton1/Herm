@@ -22,9 +22,13 @@ class TerritoryAlerter {
          )
       } else { // entered known territory
          let newTerrName = this.#Colorize(newTerr?.name, newTerr?.color);
+         let nationName = this.#Colorize(newTerr?.nation, newTerr?.nationColor ?? newTerr?.color);
+         let subtitle = newTerr.name == newTerr.nation || newTerr.nation == undefined
+            ? Chat.createTextBuilder().append(newTerr.nation == undefined ? newTerrName : nationName).build()
+            : Chat.createTextBuilder().append(newTerrName).append(", ").append(nationName).build();
          this.#SendAlert(
             Chat.createTextBuilder().append("Entered ").append(newTerrName).build(),
-            Chat.createTextBuilder().append(newTerrName).append(`, ${newTerr.nation}`).build(),
+            subtitle,
             TERRITORY_ENTER_SOUND
          )
       }

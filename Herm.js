@@ -67,40 +67,68 @@ class Herm {
     * sends update if changed from last check
     * @returns true if a plyaer is in a known territory
     */
-   Check() { // 
-      var isPresent;
+   Check() {
+      let currentPos = [Math.floor(Player.getPlayer().getPos().getX()),
+      Math.floor(Player.getPlayer().getPos().getZ())];
 
-      for (let feature of this.TerritoryFeatures) { // check if player is in any feature
+      let matches = [];
+      for (let feature of this.TerritoryFeatures) { // collect every feature the player is in
          this.#Log(`Checking ${feature.name}`)
 
-         let currentPos = [Math.floor(Player.getPlayer().getPos().getX()),
-         Math.floor(Player.getPlayer().getPos().getZ())];
+         let isPresent;
          if (feature.polygon == undefined) { // feature is a point
             isPresent = currentPos[0] == feature.x && currentPos[1] == feature.z;
          } else { // feature is a polygon
             isPresent = this.#IsPointInFeature(currentPos, feature);
          }
-
-         if (!isPresent) // Player not in this feature
-            continue;
-
-         if (feature?.name != this.#CurrentTerritory?.name) { // Player changed territory
-            this.#SendTerritoryChangeEvent(this.#CurrentTerritory, feature)
-            this.#CurrentTerritory = feature;
-         }
-         return true;
+         if (isPresent)
+            matches.push(feature);
       }
 
-      this.#Log(`IsPresent: ${isPresent}, Location: ${this.#CurrentTerritory.name}`)
+      let newTerritory = this.#ResolveTerritory(matches);
+      this.#Log(`Matches: ${matches.length}, Location: ${newTerritory?.name}`)
 
-      if (!isPresent && this.#CurrentTerritory != undefined) { // player left any known territory
-         this.#SendTerritoryChangeEvent(this.#CurrentTerritory, undefined)
-         this.#CurrentTerritory = undefined;
+      if (this.#TerritoryKey(newTerritory) != this.#TerritoryKey(this.#CurrentTerritory)) { // Player changed territory
+         this.#SendTerritoryChangeEvent(this.#CurrentTerritory, newTerritory)
+         this.#CurrentTerritory = newTerritory;
       }
-      return false;
+      return newTerritory != undefined;
+   }
+
+   // Disputed claim is a feature in Civmap, so to address the issue of overlapped claims;
+   // We verify the nation of each claim and if they overlap each other, we show the territory as disputed
+   // alongside with this subtitle such as "Nation A vs Nation B".
+   #ResolveTerritory(matches) {
+      if (matches.length == 0)
+         return undefined;
+
+      let nations = [...new Set(matches.map(f => f.nation))];
+      if (nations.length < 2) // no overlap, or overlapping claims of the same nation
+         return matches[0];
+
+      let names = [...new Set(matches.map(f => f.name))];
+      return {
+         name: `${names.join(" / ")} (Disputed)`,
+         nation: nations.join(" vs "),
+         color: matches[0].color,
+         nationColor: matches[0].nationColor,
+         disputed: true,
+         claims: matches,
+      };
+   }
+
+   #TerritoryKey(territory) {
+      if (territory == undefined)
+         return undefined;
+      let parts = territory.disputed ? territory.claims : [territory];
+      return parts.map(f => f.id ?? f.name).sort().join("|");
    }
 
    #IsPointInFeature(point, feature) {
+      for (let hole of feature.holes ?? []) { // cut-out areas aren't part of the claim
+         if (this.#IsPointInPolygon(point, hole))
+            return false;
+      }
       for (let poly of feature.polygon) {
          this.#Log(`Checking polygon with ${poly.length} vertices`)
          if (this.#IsPointInPolygon(point, poly)) {
