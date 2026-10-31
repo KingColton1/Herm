@@ -9,7 +9,7 @@ class TerritoryAlerter {
    }
 
    TerritoryChangeEventHandler(enteredEvent) {
-      let terrChange = enteredEvent.getObject("TerritoryChange")
+      let terrChange = JSON.parse(enteredEvent.getString("TerritoryChange"))
       let oldTerr = terrChange.OldTerritory
       let newTerr = terrChange.NewTerritory
       this.#Log(`EnteredEventHandler: ${oldTerr?.name} -> ${newTerr?.name}`)
@@ -36,7 +36,7 @@ class TerritoryAlerter {
 
    #SendAlert(message, subtitle, TERRITORY_CHANGE_SOUND) {
       this.#DisplayLocationChange(message, subtitle)
-      World.playSound(TERRITORY_CHANGE_SOUND, 0.1, 100)
+      World.playSound(TERRITORY_CHANGE_SOUND, TERRITORY_SOUND_VOLUME, 1)
    }
 
    /**
@@ -72,7 +72,8 @@ class TerritoryAlerter {
 const TERRITORY_DEBUG_MODE = true;   // logs debug messages to the chat
 // For other sounds see: https://www.digminecraft.com/lists/sound_list_pc.php
 const TERRITORY_ENTER_SOUND = "entity.player.levelup";  // sound when player entered some territory
-const TERRITORY_LEAVE_SOUND = "entity.wither.spawn";    // sound when player left entire territory 
+const TERRITORY_LEAVE_SOUND = "entity.wither.spawn";    // sound when player left entire territory
+const TERRITORY_SOUND_VOLUME = 0.5;                     // 0 = silent, 1 = full volume
 
 // DISPLAY OPTIONS
 // To use multiple display options add the option after a bitwise OR (|) to the end of TERRITORY_CHANGE_DISPLAY_OPTION
@@ -82,7 +83,7 @@ const TERRITORY_CHANGE_DISPLAY_OPTIONS = {
    LOG: 1 << 2,
    ACTIONBAR: 1 << 3,
 };
-const TERRITORY_CHANGE_DISPLAY_OPTION = TERRITORY_CHANGE_DISPLAY_OPTIONS.TOAST;
+const TERRITORY_CHANGE_DISPLAY_OPTION = TERRITORY_CHANGE_DISPLAY_OPTIONS.TITLE;
 // to use all set to 0xFF
 /////////////// END OF CONFIG ///////////////////////////
 /////////////////////////////////////////////////////////////

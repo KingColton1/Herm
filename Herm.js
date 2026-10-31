@@ -21,7 +21,7 @@ class Herm {
          Chat.log("Herm: " + `${msg}`)
    }
 
-   #SetupTerritory(fileName) { // TODO: support multiple claims maps
+   #SetupTerritory(fileName) {
       this.#Log(`Reading in ${fileName}`)
       if (!FS.exists(fileName)) { // TODO: download claims map if one doesn't exist
          Chat.log(`Territory file '${fileName}' does not exist! Stopping...`);
@@ -31,7 +31,7 @@ class Herm {
          let file = FS.open(fileName);
          let territoryJson = JSON.parse(file.read());
          this.TerritoryFeatures = territoryJson.features;
-         Chat.log(this.LandName)
+         Chat.log(`Herm: loaded ${this.TerritoryFeatures.length} territories`)
       }
       catch (e) {
          Chat.log(e);
@@ -58,8 +58,11 @@ class Herm {
     */
    #SendTerritoryChangeEvent(oldTerritory, newTerritory) {
       this.#Log(`TerritoryChangeEvent: ${oldTerritory?.name}, ${oldTerritory?.nation} -> ${newTerritory?.name}, ${newTerritory?.nation}`)
-      this.#TerritoryChangeEvent.putObject("TerritoryChange", { NewTerritory: newTerritory, OldTerritory: oldTerritory })
+      let change = { NewTerritory: this.#Summary(newTerritory), OldTerritory: this.#Summary(oldTerritory) }
+      this.#TerritoryChangeEvent.putString("TerritoryChange", JSON.stringify(change))
       this.#TerritoryChangeEvent.trigger()
+      for (let script of TERRITORY_LISTENER_SCRIPTS)
+         JsMacros.runScript(script, this.#TerritoryChangeEvent)
    }
 
    /**
@@ -115,6 +118,14 @@ class Herm {
          disputed: true,
          claims: matches,
       };
+   }
+
+   // Territory info the listeners need to know without the large polygon data
+   #Summary(territory) {
+      if (territory == undefined)
+         return undefined;
+      let { polygon, holes, claims, ...info } = territory;
+      return info;
    }
 
    #TerritoryKey(territory) {
@@ -180,13 +191,16 @@ class Herm {
 //////////////////////////////////////////////////////////
 /////////////// CONFIG //////////////////////////////////
 
-const TERRITORY_CLAIMS_FILENAME = "Updated Icenian Territory.json"; // Should be in same folder as script
+const TERRITORY_CLAIMS_FILENAME = "Civmap Territory.json"; // Should be in same folder as script
 
 // to disable continuous polling set to 0
 const TERRITORY_POLLING_INTERVAL = 3;  // IN SECONDS
 const TERRITORY_DEBUG_MODE = false;   // logs debug messages to the chat
 const TERRITORY_HOTKEY = undefined;   // optional key to activate a territory check
 //"key.keyboard.left.bracket";
+
+// Listener script that will run when you cross a border
+const TERRITORY_LISTENER_SCRIPTS = ["Gods/TerritoryAlerter.js"];
 
 /////////////// END OF CONFIG ///////////////////////////
 /////////////////////////////////////////////////////////////
